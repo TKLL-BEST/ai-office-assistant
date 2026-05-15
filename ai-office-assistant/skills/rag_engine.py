@@ -33,7 +33,7 @@ from typing import List, Dict, Optional
 # ── 配置 ────────────────────────────────────────────────────────────
 
 # DeepSeek Embedding API
-DEEPSEEK_API_KEY = "sk-44e4d328f0b64939a5a052c87c61726c"
+DEEPSEEK_API_KEY = "your_API"
 LLM_URL = "https://api.deepseek.com/v1/chat/completions"
 LLM_MODEL = "deepseek-chat"
 
