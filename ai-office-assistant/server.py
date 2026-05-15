@@ -24,7 +24,7 @@ DATA_DIR = BASE_DIR / "data"
 FRONTEND_DIR = BASE_DIR / "frontend"
 
 # DeepSeek API 配置
-DEEPSEEK_API_KEY = "sk-44e4d328f0b64939a5a052c87c61726c"
+DEEPSEEK_API_KEY = "your_API"
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
 # 确保数据目录存在
