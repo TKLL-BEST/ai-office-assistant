@@ -1,16 +1,19 @@
 AI 办公助手（大模型应用开发测试）
 该项目是基于 OpenClaw 开发的个人轻量化大模型应用实战案例，集成 文档生成、文档解析、会议纪要、私有知识库 RAG 四大办公高频功能。项目采用 Python + Flask 构建后端，可本地私有化部署，适合学习大模型应用开发、AI Agent、RAG 检索增强生成等技术，也可作为求职作品集项目展示。
+
 功能概览
 ✅ 文档生成助手：支持周报、PRD、方案、短文、公文等模板，一键生成正式文档，支持润色 / 改写 / 缩写。
 ✅ 文档智能解析：支持 PDF / DOCX / TXT / MD 文件上传，自动提取文本、表格、结构化内容，AI 自动抽取关键信息、核心结论、重要数据。
 ✅ 智能会议纪要：支持音频上传（模拟语音转写），自动生成会议核心议题、关键结论、待办事项（含负责人），支持导出完整纪要。
 ✅ 私有知识库 RAG：支持文档入库、向量化、相似度检索、精准问答，所有数据本地存储，隐私可控。
+
 技术栈
 后端：Python、Flask、Flask-CORS
 AI 能力：DeepSeek LLM API、文本分块、余弦相似度检索
 文档处理：PyPDF2、python-docx、Pathlib
 向量计算：NumPy、MD5 哈希（轻量 Embedding 替代）
 部署：OpenClaw、Shell 脚本、私有化本地部署
+
 项目结构
 plaintext
 ai-office-assistant/
@@ -21,6 +24,7 @@ ai-office-assistant/
 ├── requirements.txt         # 依赖包清单
 ├── .gitignore               # 忽略上传文件/缓存/密钥
 └── README.md                # 项目说明文档
+
 快速部署（本地运行）
 1. 安装依赖
 bash
