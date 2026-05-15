@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 办公助手</title>
+<style>
+:root {
+  --bg: #0f0f11;
+  --surface: #1c1c1e;
+  --surface2: #2c2c2e;
+  --border: rgba(255,255,255,0.08);
+  --text: #e8e8ec;
+  --text2: #9898a0;
+  --accent: #5e9cff;
+  --accent2: #7c5cfc;
+  --green: #34c759;
+  --orange: #ff9500;
+  --red: #ff3b30;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
+
+/* ── Header ── */
+header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+header h1 {
+  font-size: 18px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+header .status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text2); }
+header .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+
+/* ── Tabs ── */
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+.tab-btn {
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  position: relative;
+  transition: color 0.2s;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--accent); }
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 16px; right: 16px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+}
+
+/* ── Main Content ── */
+main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ── Card ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Form Elements ── */
+textarea, input[type="text"], select {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+  font-family: inherit;
+}
+textarea:focus, input:focus, select:focus { border-color: var(--accent); }
+textarea { resize: vertical; min-height: 80px; }
+select { cursor: pointer; }
+select option { background: var(--surface); }
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { filter: brightness(1.15); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-secondary { background: var(--surface2); color: var(--text); }
+.btn-secondary:hover { background: rgba(255,255,255,0.12); }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-danger:hover { filter: brightness(1.15); }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* ── File Upload ── */
+.upload-area {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text2);
+  font-size: 13px;
+}
+.upload-area:hover { border-color: var(--accent); background: rgba(94,156,255,0.05); }
+.upload-area.dragover { border-color: var(--accent); background: rgba(94,156,255,0.1); }
+.upload-area input[type="file"] { display: none; }
+
+/* ── Result Area ── */
+.result-area {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(0,0,0,0.2);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  line-height: 1.7;
+  max-height: 400px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Progress ── */
+.progress {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text2);
+}
+.progress.active { display: flex; }
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── KB List ── */
+.kb-list { margin-top: 12px; }
+.kb-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+.kb-item .kb-name { flex: 1; }
+.kb-item .kb-meta { color: var(--text2); font-size: 12px; margin: 0 12px; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: #fff;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; }
+.toast.success { background: var(--green); }
+.toast.error { background: var(--red); }
+.toast.info { background: var(--text2); }
+
+/* ── Empty State ── */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text2);
+}
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state p { font-size: 14px; margin-bottom: 4px; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  header { padding: 12px 16px; }
+  main { padding: 12px; }
+  .card { padding: 12px; }
+}
+
+/* ── Markdown result ── */
+.markdown-content h1, .markdown-content h2, .markdown-content h3 {
+  margin: 12px 0 6px;
+}
+.markdown-content h1 { font-size: 16px; }
+.markdown-content h2 { font-size: 15px; }
+.markdown-content h3 { font-size: 14px; }
+.markdown-content ul, .markdown-content ol { padding-left: 20px; }
+.markdown-content li { margin: 4px 0; }
+.markdown-content strong { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🤖 AI 办公助手</h1>
+  <div class="status">
+    <span class="status-dot" id="statusDot"></span>
+    <span id="statusText">检查中...</span>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="docgen">📄 文档生成</button>
+  <button class="tab-btn" data-tab="pdfparse">📖 文档解析</button>
+  <button class="tab-btn" data-tab="meeting">🎙 会议纪要</button>
+  <button class="tab-btn" data-tab="ragqa">🧠 知识库</button>
+</div>
+
+<main>
+  <!-- ═══════════ 模块1: 文档生成 ═══════════ -->
+  <div class="tab-content active" id="tab-docgen">
+    <div class="card">
+      <div class="card-title">📝 文档生成</div>
+      <select id="docTemplate" style="margin-bottom:8px">
+        <option value="essay">短文/博客</option>
+        <option value="weekly_report">个人周报</option>
+        <option value="prd">产品需求文档(精简版)</option>
+        <option value="proposal">方案建议书</option>
+        <option value="official_doc">公文/通知</option>
+      </select>
+      <textarea id="docRequirements" placeholder="描述你想要生成的内容..." rows="4"></textarea>
+      <input type="text" id="docExtra" placeholder="补充要求（可选）" style="margin-top:8px">
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="generateDoc()">✨ 生成文档</button>
+      </div>
+      <div class="progress" id="docProgress">
+        <div class="spinner"></div>
+        <span>正在生成中...</span>
+      </div>
+    </div>
+
+    <div class="card" id="docResultCard" style="display:none">
+      <div class="card-title">📄 生成结果</div>
+      <div class="result-area" id="docResult"></div>
+      <div class="btn-group">
+        <button class="btn btn-secondary btn-sm" onclick="optimizeDoc('polish')">✏️ 润色</button>
+        <button class="btn btn-secondary btn-sm" onclick="optimizeDoc('rewrite')">🔄 改写</button>
+        <button class="btn btn-secondary btn-sm" onclick="optimizeDoc('shorten')">📐 缩写</button>
+        <button class="btn btn-secondary btn-sm" onclick="copyDoc()">📋 复制</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ 模块2: 文档解析 ═══════════ -->
+  <div class="tab-content" id="tab-pdfparse">
+    <div class="card">
+      <div class="card-title">📖 文档智能解析</div>
+      <div class="upload-area" id="pdfUploadArea" onclick="document.getElementById('pdfFile').click()">
+        <div style="font-size:32px;margin-bottom:8px">📁</div>
+        <div>点击上传或拖拽文件到此处</div>
+        <div style="font-size:12px;margin-top:4px">支持 PDF、Word（.docx）、TXT</div>
+        <input type="file" id="pdfFile" accept=".pdf,.docx,.txt" onchange="uploadPdf()">
+      </div>
+      <div class="progress" id="pdfProgress">
+        <div class="spinner"></div>
+        <span>正在解析文档...</span>
+      </div>
+    </div>
+
+    <div class="card" id="pdfResultCard" style="display:none">
+      <div class="card-title">📄 解析结果</div>
+      <div class="btn-group">
+        <button class="btn btn-secondary btn-sm" onclick="extractKeyInfo()">🎯 提取关键信息</button>
+      </div>
+      <div class="result-area" id="pdfResult"></div>
+      <div class="result-area" id="pdfExtracted" style="display:none;margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ 模块3: 会议纪要 ═══════════ -->
+  <div class="tab-content" id="tab-meeting">
+    <div class="card">
+      <div class="card-title">🎙 智能会议助手</div>
+      <div class="upload-area" id="audioUploadArea" onclick="document.getElementById('audioFile').click()">
+        <div style="font-size:32px;margin-bottom:8px">🎵</div>
+        <div>点击上传音频文件（MP3/WAV/M4A）</div>
+        <div style="font-size:12px;margin-top:4px">或直接在下框粘贴转写文本</div>
+        <input type="file" id="audioFile" accept=".mp3,.wav,.m4a,.ogg" onchange="uploadAudio()">
+      </div>
+      <textarea id="meetingText" placeholder="或直接粘贴会议转写文本..." rows="6" style="margin-top:8px"></textarea>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="generateMeetingSummary()">📋 生成会议纪要</button>
+      </div>
+      <div class="progress" id="meetingProgress">
+        <div class="spinner"></div>
+        <span>正在生成纪要...</span>
+      </div>
+    </div>
+
+    <div class="card" id="meetingResultCard" style="display:none">
+      <div class="card-title">📋 会议纪要</div>
+      <div class="result-area" id="meetingTranscript" style="max-height:200px;margin-bottom:8px"></div>
+      <div class="result-area" id="meetingSummary"></div>
+      <div class="btn-group">
+        <button class="btn btn-secondary btn-sm" onclick="exportMeeting()">💾 导出纪要</button>
+        <button class="btn btn-secondary btn-sm" onclick="copyContent('meetingSummary')">📋 复制</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ 模块4: 知识库 RAG ═══════════ -->
+  <div class="tab-content" id="tab-ragqa">
+    <div class="card">
+      <div class="card-title">🧠 私有知识库</div>
+      <div class="upload-area" id="kbUploadArea" onclick="document.getElementById('kbFile').click()">
+        <div style="font-size:32px;margin-bottom:8px">📚</div>
+        <div>上传文档到知识库</div>
+        <div style="font-size:12px;margin-top:4px">支持 PDF、Word、TXT、Markdown</div>
+        <input type="file" id="kbFile" accept=".pdf,.docx,.txt,.md" onchange="uploadKbDoc()">
+      </div>
+      <div class="progress" id="kbProgress">
+        <div class="spinner"></div>
+        <span>正在入库...</span>
+      </div>
+    </div>
+
+    <div class="card" id="kbListCard">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>📚 已入库文档</span>
+        <div>
+          <button class="btn btn-sm btn-secondary" onclick="loadKbList()">🔄 刷新</button>
+          <button class="btn btn-sm btn-danger" onclick="clearKb()">🗑 清空</button>
+        </div>
+      </div>
+      <div id="kbList" class="kb-list">
+        <div class="empty-state">
+          <div class="icon">📚</div>
+          <p>知识库为空</p>
+          <p style="font-size:12px">上传文档后即可开始问答</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">💬 知识库问答</div>
+      <input type="text" id="kbQuestion" placeholder="输入问题，从知识库中查找答案..." onkeydown="if(event.key==='Enter')askKb()">
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="askKb()">🔍 提问</button>
+      </div>
+      <div class="progress" id="kbAskProgress">
+        <div class="spinner"></div>
+        <span>正在查询...</span>
+      </div>
+    </div>
+
+    <div class="card" id="kbAnswerCard" style="display:none">
+      <div class="card-title">💡 回答</div>
+      <div class="result-area" id="kbAnswer"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const API = window.location.origin;
+
+// ── Toast ──
+function toast(msg, type = 'info') {
+  let el = document.querySelector('.toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.className = 'toast ' + type + ' show';
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ── Status Check ──
+async function checkStatus() {
+  const dot = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  try {
+    const res = await fetch(API + '/api/status');
+    const data = await res.json();
+    dot.style.background = data.status === 'ok' ? 'var(--green)' : 'var(--orange)';
+    text.textContent = '已连接 · ' + data.model;
+  } catch (e) {
+    dot.style.background = 'var(--red)';
+    text.textContent = '连接失败';
+  }
+}
+checkStatus();
+
+// ── Tab Switching ──
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Drag & Drop ──
+document.querySelectorAll('.upload-area').forEach(area => {
+  area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('dragover'); });
+  area.addEventListener('dragleave', () => area.classList.remove('dragover'));
+  area.addEventListener('drop', e => {
+    e.preventDefault();
+    area.classList.remove('dragover');
+    const input = area.querySelector('input[type="file"]');
+    if (input && e.dataTransfer.files.length) {
+      input.files = e.dataTransfer.files;
+      input.dispatchEvent(new Event('change'));
+    }
+  });
+});
+
+// ═══════════ 模块1: 文档生成 ═══════════
+
+async function generateDoc() {
+  const requirements = document.getElementById('docRequirements').value.trim();
+  if (!requirements) { toast('请填写需求描述', 'error'); return; }
+  
+  const progress = document.getElementById('docProgress');
+  const resultCard = document.getElementById('docResultCard');
+  progress.classList.add('active');
+  
+  try {
+    const res = await fetch(API + '/api/doc-generator/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        template: document.getElementById('docTemplate').value,
+        requirements: requirements,
+        extra_instructions: document.getElementById('docExtra').value,
+      }),
+    });
+    const data = await res.json();
+    progress.classList.remove('active');
+    
+    if (data.error) { toast(data.error, 'error'); return; }
+    
+    document.getElementById('docResult').textContent = data.content;
+    document.getElementById('docResult').dataset.docId = data.doc_id || '';
+    resultCard.style.display = 'block';
+    toast('文档生成成功', 'success');
+  } catch (e) {
+    progress.classList.remove('active');
+    toast('生成失败: ' + e.message, 'error');
+  }
+}
+
+async function optimizeDoc(action) {
+  const content = document.getElementById('docResult').textContent;
+  if (!content) { toast('请先生成文档', 'error'); return; }
+  
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = '处理中...';
+  
+  const actionNames = { polish: '润色中', rewrite: '改写中', shorten: '缩写中' };
+  toast(actionNames[action] || '处理中...', 'info');
+  
+  try {
+    const res = await fetch(API + '/api/doc-generator/optimize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content, action }),
+    });
+    const data = await res.json();
+    if (data.error) { toast(data.error, 'error'); }
+    else {
+      document.getElementById('docResult').textContent = data.content;
+      toast('优化完成', 'success');
+    }
+  } catch (e) { toast('优化失败: ' + e.message, 'error'); }
+  finally { btn.disabled = false; btn.textContent = {polish:'✏️ 润色',rewrite:'🔄 改写',shorten:'📐 缩写'}[action]; }
+}
+
+function copyDoc() {
+  const content = document.getElementById('docResult').textContent;
+  navigator.clipboard.writeText(content).then(() => toast('已复制到剪贴板', 'success')).catch(() => {});
+}
+
+// ═══════════ 模块2: 文档解析 ═══════════
+
+let pdfText = '';
+
+async function uploadPdf() {
+  const file = document.getElementById('pdfFile').files[0];
+  if (!file) return;
+  
+  const progress = document.getElementById('pdfProgress');
+  progress.classList.add('active');
+  
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  try {
+    const res = await fetch(API + '/api/pdf-parser/upload', {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await res.json();
+    progress.classList.remove('active');
+    
+    if (data.error) { toast(data.error, 'error'); return; }
+    
+    pdfText = data.text;
+    document.getElementById('pdfResult').textContent = data.text.slice(0, 3000) + (data.text.length > 3000 ? '\n\n...（内容过长已截取）' : '');
+    document.getElementById('pdfResultCard').style.display = 'block';
+    toast('解析成功，共提取 ' + data.text.length + ' 字符', 'success');
+  } catch (e) {
+    progress.classList.remove('active');
+    toast('解析失败: ' + e.message, 'error');
+  }
+}
+
+async function extractKeyInfo() {
+  if (!pdfText) { toast('请先上传文档', 'error'); return; }
+  
+  toast('正在提取关键信息...', 'info');
+  try {
+    const res = await fetch(API + '/api/pdf-parser/extract', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: pdfText }),
+    });
+    const data = await res.json();
+    if (data.error) { toast(data.error, 'error'); return; }
+    
+    const extracted = data.extracted;
+    let html = '<strong>🎯 关键信息提取结果</strong><br><br>';
+    if (extracted.title) html += '<strong>核心主题：</strong>' + extracted.title + '<br><br>';
+    if (extracted.key_points && extracted.key_points.length) {
+      html += '<strong>关键要点：</strong><ul>';
+      extracted.key_points.forEach(p => { html += '<li>' + p + '</li>'; });
+      html += '</ul>';
+    }
+    if (extracted.key_data && extracted.key_data.length) {
+      html += '<strong>重要数据：</strong><ul>';
+      extracted.key_data.forEach(d => { html += '<li>' + d.item + '：' + d.value + '</li>'; });
+      html += '</ul>';
+    }
+    if (extracted.conclusion) html += '<strong>结论：</strong>' + extracted.conclusion;
+    
+    const el = document.getElementById('pdfExtracted');
+    el.innerHTML = html;
+    el.style.display = 'block';
+    toast('关键信息提取完成', 'success');
+  } catch (e) { toast('提取失败: ' + e.message, 'error'); }
+}
+
+// ═══════════ 模块3: 会议纪要 ═══════════
+
+let meetingAudioId = '';
+
+async function uploadAudio() {
+  const file = document.getElementById('audioFile').files[0];
+  if (!file) return;
+  
+  toast('音频上传中...', 'info');
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  try {
+    const res = await fetch(API + '/api/meeting-summary/upload', {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await res.json();
+    if (data.error) { toast(data.error, 'error'); return; }
+    
+    meetingAudioId = data.upload_id;
+    toast('音频上传成功，点击"生成会议纪要"处理', 'success');
+  } catch (e) { toast('上传失败: ' + e.message, 'error'); }
+}
+
+async function generateMeetingSummary() {
+  const text = document.getElementById('meetingText').value.trim();
+  if (!text && !meetingAudioId) {
+    toast('请上传音频或粘贴转写文本', 'error');
+    return;
+  }
+  
+  const progress = document.getElementById('meetingProgress');
+  progress.classList.add('active');
+  
+  try {
+    const res = await fetch(API + '/api/meeting-summary/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        upload_id: meetingAudioId,
+        text: text,
+      }),
+    });
+    const data = await res.json();
+    progress.classList.remove('active');
+    
+    if (data.error) { toast(data.error, 'error'); return; }
+    
+    document.getElementById('meetingTranscript').textContent = '📜 转写文本\n' + data.transcript;
+    document.getElementById('meetingSummary').textContent = data.summary;
+    document.getElementById('meetingResultCard').style.display = 'block';
+    toast('会议纪要生成成功', 'success');
+  } catch (e) {
+    progress.classList.remove('active');
+    toast('生成失败: ' + e.message, 'error');
+  }
+}
+
+async function exportMeeting() {
+  const transcript = document.getElementById('meetingTranscript').textContent.replace('📜 转写文本\n', '');
+  const summary = document.getElementById('meetingSummary').textContent;
+  
+  try {
+    const res = await fetch(API + '/api/meeting-summary/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transcript, summary }),
+    });
+    const data = await res.json();
+    if (data.content) {
+      navigator.clipboard.writeText(data.content).then(() => toast('已复制到剪贴板', 'success')).catch(() => {});
+    }
+  } catch (e) { toast('导出失败: ' + e.message, 'error'); }
+}
+
+// ═══════════ 模块4: 知识库 ═══════════
+
+async function uploadKbDoc() {
+  const file = document.getElementById('kbFile').files[0];
+  if (!file) return;
+  
+  const progress = document.getElementById('kbProgress');
+  progress.classList.add('active');
+  
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  try {
+    const res = await fetch(API + '/api/rag-qa/upload', {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await res.json();
+    progress.classList.remove('active');
+    
+    if (data.error) { toast(data.error, 'error'); return; }
+    
+    toast(`入库成功：${file.name}（${data.chunks_count} 个文本块）`, 'success');
+    loadKbList();
+  } catch (e) {
+    progress.classList.remove('active');
+    toast('入库失败: ' + e.message, 'error');
+  }
+}
+
+async function loadKbList() {
+  try {
+    const res = await fetch(API + '/api/rag-qa/list');
+    const data = await res.json();
+    const list = document.getElementById('kbList');
+    
+    if (!data.documents || data.documents.length === 0) {
+      list.innerHTML = '<div class="empty-state"><div class="icon">📚</div><p>知识库为空</p><p style="font-size:12px">上传文档后即可开始问答</p></div>';
+      return;
+    }
+    
+    list.innerHTML = data.documents.map(doc => `
+      <div class="kb-item">
+        <span class="kb-name">📄 ${doc.filename}</span>
+        <span class="kb-meta">${doc.chunks_count} 块 · ${doc.upload_time}</span>
+        <button class="btn btn-sm btn-danger" onclick="deleteKbDoc('${doc.doc_id}')">删除</button>
+      </div>
+    `).join('');
+  } catch (e) { toast('加载失败: ' + e.message, 'error'); }
+}
+
+async function deleteKbDoc(docId) {
+  try {
+    const res = await fetch(API + '/api/rag-qa/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ doc_id: docId }),
+    });
+    const data = await res.json();
+    if (data.error) { toast(data.error, 'error'); return; }
+    toast('已删除', 'success');
+    loadKbList();
+  } catch (e) { toast('删除失败: ' + e.message, 'error'); }
+}
+
+async function clearKb() {
+  if (!confirm('确认清空整个知识库？')) return;
+  try {
+    await fetch(API + '/api/rag-qa/clear', { method: 'POST' });
+    toast('知识库已清空', 'success');
+    loadKbList();
+    document.getElementById('kbAnswerCard').style.display = 'none';
+  } catch (e) { toast('清空失败: ' + e.message, 'error'); }
+}
+
+async function askKb() {
+  const question = document.getElementById('kbQuestion').value.trim();
+  if (!question) { toast('请输入问题', 'error'); return; }
+  
+  const progress = document.getElementById('kbAskProgress');
+  progress.classList.add('active');
+  
+  try {
+    const res = await fetch(API + '/api/rag-qa/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question }),
+    });
+    const data = await res.json();
+    progress.classList.remove('active');
+    
+    if (data.error) { toast(data.error, 'error'); return; }
+    
+    document.getElementById('kbAnswer').textContent = data.answer;
+    document.getElementById('kbAnswerCard').style.display = 'block';
+  } catch (e) {
+    progress.classList.remove('active');
+    toast('查询失败: ' + e.message, 'error');
+  }
+}
+
+function copyContent(elementId) {
+  const el = document.getElementById(elementId);
+  if (el) {
+    navigator.clipboard.writeText(el.textContent).then(() => toast('已复制到剪贴板', 'success')).catch(() => {});
+  }
+}
+
+// 初始化加载知识库列表
+loadKbList();
+</script>
+</body>
+</html>
