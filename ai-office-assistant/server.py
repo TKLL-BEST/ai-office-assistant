@@ -24,7 +24,7 @@ DATA_DIR = BASE_DIR / "data"
 FRONTEND_DIR = BASE_DIR / "frontend"
 
 # DeepSeek API 配置
-DEEPSEEK_API_KEY = "your_API"
+DEEPSEEK_API_KEY = "sk-62df4d24256541d5a2ccc9e589537e5b"
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
 # 确保数据目录存在
@@ -40,14 +40,33 @@ CORS(app)
 # 工具函数
 # ═══════════════════════════════════════════════════════════════════
 
-def call_llm(prompt, system_prompt=None):
-    """调用 DeepSeek 大模型"""
+def call_llm(prompt, system_prompt=None, use_feedback=True):
+    """调用 DeepSeek 大模型
+
+    参数：
+        prompt: 用户输入
+        system_prompt: 可选，自定义系统提示词
+        use_feedback: 是否自动加载基于评分的个性化系统提示词
+    """
     import urllib.request
     import urllib.error
 
     messages = []
+    
     if system_prompt:
+        # 如果显式传了 system_prompt，用它
         messages.append({"role": "system", "content": system_prompt})
+    elif use_feedback:
+        # 自动从反馈生成个性化 system prompt
+        try:
+            from skills.feedback_engine import FeedbackEngine
+            engine = FeedbackEngine()
+            fb_prompt = engine.generate_system_prompt()
+            if fb_prompt:
+                messages.append({"role": "system", "content": fb_prompt})
+        except Exception:
+            pass  # 如果没有反馈数据，就不加 system prompt
+
     messages.append({"role": "user", "content": prompt})
 
     payload = json.dumps({
@@ -497,8 +516,274 @@ def clear_kb():
         return jsonify({"error": f"清空失败: {e}"}), 500
 
 
-# ── 导出 ──────────────────────────────────────────────────────────
-@app.route("/api/export/<filename>", methods=["GET"])
+
+@app.route("/api/feedback", methods=["POST"])
+def submit_feedback():
+    data = request.json
+    prompt = data.get("prompt", "")
+    response = data.get("response", "")
+    rating = data.get("rating", 0)
+    module = data.get("module", "unknown")
+    feedback_text = data.get("feedback_text", "")
+    tags = data.get("tags", [])
+    if not prompt or not response:
+        return jsonify({"error": "prompt and response required"}), 400
+    if not 1 <= rating <= 5:
+        return jsonify({"error": "rating must be 1-5"}), 400
+    try:
+        from skills.feedback_engine import FeedbackEngine
+        engine = FeedbackEngine()
+        result = engine.add_feedback(
+            prompt=prompt, response=response, rating=rating,
+            module=module, feedback_text=feedback_text, tags=tags,
+            metadata={"model": "deepseek-chat"}
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/feedback/list", methods=["GET"])
+def list_feedback():
+    limit = request.args.get("limit", 50, type=int)
+    offset = request.args.get("offset", 0, type=int)
+    module = request.args.get("module", None)
+    try:
+        from skills.feedback_engine import FeedbackEngine
+        engine = FeedbackEngine()
+        feedbacks = engine.list_feedbacks(limit=limit, offset=offset, module=module)
+        stats = engine.get_stats()
+        dpo_stats = engine.get_dpo_stats()
+        return jsonify({"feedbacks": feedbacks, "stats": stats, "dpo_stats": dpo_stats})
+    except Exception as e:
+        return jsonify({"feedbacks": [], "error": str(e)})
+
+@app.route("/api/feedback/stats", methods=["GET"])
+def feedback_stats():
+    try:
+        from skills.feedback_engine import FeedbackEngine
+        engine = FeedbackEngine()
+        stats = engine.get_stats()
+        dpo_stats = engine.get_dpo_stats()
+        pref = engine.get_preference_summary()
+        return jsonify({"stats": stats, "dpo_stats": dpo_stats, "preference": pref})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/feedback/dpo/export", methods=["GET"])
+def export_dpo_data():
+    min_rating_diff = request.args.get("min_rating_diff", 2, type=int)
+    try:
+        from skills.feedback_engine import FeedbackEngine
+        engine = FeedbackEngine()
+        dpo_pairs = engine.export_dpo(min_rating_diff=min_rating_diff)
+        import time
+        filename = "dpo_dataset_" + time.strftime("%Y%m%d_%H%M%S") + ".jsonl"
+        filepath = engine.save_dpo_export(dpo_pairs, filename)
+        return jsonify({
+            "dpo_pairs": len(dpo_pairs), "filepath": str(filepath),
+            "filename": filename, "format": "JSONL",
+            "usage": "For DPO training, see rlhf_learning/dpo_demo.py"
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ============================================================
+# RLHF 模拟器路由 (用 DeepSeek API 模拟完整 RLHF 流程)
+# ============================================================
+
+# 全局单例
+_rlhf_sim = None
+
+def get_rlhf_sim():
+    global _rlhf_sim
+    if _rlhf_sim is None:
+        from skills.rlhf_simulator import RLHF_Simulator
+        _rlhf_sim = RLHF_Simulator()
+    return _rlhf_sim
+
+
+@app.route("/api/rlhf/sim/status", methods=["GET"])
+def rlhf_sim_status():
+    """获取 RLHF 模拟器状态"""
+    try:
+        sim = get_rlhf_sim()
+        status = sim.get_status()
+        return jsonify(status)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/rlhf/sim/train", methods=["POST"])
+def rlhf_sim_train():
+    """
+    执行一步 RLHF 训练（用 DeepSeek API 模拟 PPO 流程）
+    
+    请求体：
+    {
+        "prompt": "用户输入",  # 必填
+        "beta": 0.1           # 可选，KL 惩罚系数
+    }
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        prompt = data.get("prompt", "")
+        if not prompt:
+            return jsonify({"error": "缺少 prompt 参数"}), 400
+        beta = data.get("beta", 0.1)
+        
+        sim = get_rlhf_sim()
+        result = sim.train_step(prompt, beta=beta)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/rlhf/sim/reward", methods=["POST"])
+def rlhf_sim_reward():
+    """
+    用 DeepSeek API 模拟 Reward Model 评分
+    
+    请求体：
+    {
+        "prompt": "用户问题",
+        "response": "AI 回答"
+    }
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        prompt = data.get("prompt", "")
+        response = data.get("response", "")
+        if not prompt or not response:
+            return jsonify({"error": "缺少 prompt 或 response"}), 400
+        
+        sim = get_rlhf_sim()
+        scores = sim.get_reward_model_response(prompt, response)
+        return jsonify(scores)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/rlhf/sim/compare", methods=["POST"])
+def rlhf_sim_compare():
+    """
+    DPO 风格偏好对比
+    
+    请求体：
+    {
+        "prompt": "用户问题",
+        "response_a": "回答A",
+        "response_b": "回答B"
+    }
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        prompt = data.get("prompt", "")
+        a = data.get("response_a", "")
+        b = data.get("response_b", "")
+        if not prompt or not a or not b:
+            return jsonify({"error": "缺少 prompt/response_a/response_b"}), 400
+        
+        sim = get_rlhf_sim()
+        result = sim.reward_model.compare(prompt, a, b)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ============================================================
+# 旧版 RLHF 路由（偏好学习）
+# ============================================================
+
+@app.route("/api/rlhf/status", methods=["GET"])
+def rlhf_status():
+    try:
+        from skills.rlhf_engine import RLHF_Engine
+        engine = RLHF_Engine()
+        info = engine.get_current_version_info()
+        return jsonify({
+            "status": "ok",
+            "current_version": info["version_id"],
+            "score": info["score"],
+            "created_at": info["created_at"],
+            "total_versions": info["total_versions"],
+            "styles": info["styles"],
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@app.route("/api/feedback/preference", methods=["GET"])
+def get_preference():
+    """获取基于评分的偏好分析结果"""
+    try:
+        from skills.feedback_engine import FeedbackEngine
+        engine = FeedbackEngine()
+        pref = engine.get_preference_summary()
+        return jsonify(pref)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/rlhf/train", methods=["POST"])
+def rlhf_train():
+    """
+    训练入口：根据评分优化系统提示词 + 更新偏好分析
+    """
+    try:
+        from skills.feedback_engine import FeedbackEngine
+        engine = FeedbackEngine()
+        pref = engine.get_preference_summary()
+        system_prompt = engine.generate_system_prompt()
+        
+        return jsonify({
+            "success": True,
+            "message": "基于评分的系统提示词已更新",
+            "signal_strength": pref["signal_strength"],
+            "total_feedbacks": pref["total"],
+            "system_prompt": system_prompt or "暂无足够反馈数据生成个性化提示词",
+            "preferences": pref["preferences"],
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/rlhf/evaluate", methods=["GET"])
+def rlhf_evaluate():
+    try:
+        from skills.rlhf_engine import RLHF_Engine
+        engine = RLHF_Engine()
+        report = engine.evaluate()
+        return jsonify(report)
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@app.route("/api/rlhf/history", methods=["GET"])
+def rlhf_history():
+    try:
+        from skills.rlhf_engine import RLHF_Engine
+        engine = RLHF_Engine()
+        history = engine.history(limit=20)
+        return jsonify({
+            "versions": history,
+            "total": len(history),
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@app.route("/api/rlhf/rollback", methods=["POST"])
+def rlhf_rollback():
+    try:
+        data = request.get_json(silent=True) or {}
+        version_id = data.get("version_id", None)
+
+        from skills.rlhf_engine import RLHF_Engine
+        engine = RLHF_Engine()
+        result = engine.rollback(version_id)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 def export_file(filename):
     """下载导出文件"""
     file_path = DATA_DIR / "outputs" / filename

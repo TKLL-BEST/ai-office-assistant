@@ -1,0 +1,79 @@
+{
+  "feedbacks": [
+    {
+      "id": "fb_c2ce1f377dbc",
+      "timestamp": "2026-06-23T11:47:19",
+      "module": "writing",
+      "prompt": "写一份产品需求文档",
+      "response": "1) 功能模块：用户登录 2) 交互流程：点击登录→输入账号→验证→跳转首页 3) 技术方案：OAuth 2.0 + JWT",
+      "rating": 5,
+      "feedback_text": "",
+      "tags": [],
+      "metadata": {}
+    },
+    {
+      "id": "fb_89aeabe0f1a0",
+      "timestamp": "2026-06-23T11:47:19",
+      "module": "writing",
+      "prompt": "写一份产品需求文档",
+      "response": "做一个登录功能",
+      "rating": 1,
+      "feedback_text": "",
+      "tags": [],
+      "metadata": {}
+    },
+    {
+      "id": "fb_bdb4110cb613",
+      "timestamp": "2026-06-23T11:47:19",
+      "module": "analysis",
+      "prompt": "分析竞争对手",
+      "response": "1) 从产品功能维度：竞品A支持多语言而我们有缺失 2) 从定价维度：竞品B低于我们30% 3) 从市场维度：竞品C的份额增长了5% 4) 从技术维度：竞品D的AI功能领先半年",
+      "rating": 5,
+      "feedback_text": "",
+      "tags": [],
+      "metadata": {}
+    },
+    {
+      "id": "fb_a66877d7b7b5",
+      "timestamp": "2026-06-23T11:47:19",
+      "module": "analysis",
+      "prompt": "分析竞争对手",
+      "response": "竞品比我们强",
+      "rating": 1,
+      "feedback_text": "",
+      "tags": [],
+      "metadata": {}
+    },
+    {
+      "id": "fb_9f6365e07488",
+      "timestamp": "2026-06-23T11:47:19",
+      "module": "writing",
+      "prompt": "写一封商务回函",
+      "response": "尊敬的客户：关于您提出的合作方案，经我方审慎评估，认为方案具备可行性。现将具体意见反馈如下：一、合作模式可行 二、分阶段执行 三、风险可控",
+      "rating": 5,
+      "feedback_text": "",
+      "tags": [],
+      "metadata": {}
+    },
+    {
+      "id": "fb_98dc50129bdf",
+      "timestamp": "2026-06-23T11:47:19",
+      "module": "writing",
+      "prompt": "写一封商务回函",
+      "response": "方案可行，可以合作",
+      "rating": 1,
+      "feedback_text": "",
+      "tags": [],
+      "metadata": {}
+    }
+  ],
+  "stats": {
+    "total_feedbacks": 6,
+    "avg_rating": 3.0,
+    "module_counts": {
+      "writing": 4,
+      "analysis": 2
+    },
+    "last_updated": "2026-06-23T11:47:19"
+  }
+}
