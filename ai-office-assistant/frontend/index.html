@@ -52,6 +52,33 @@ header h1 {
 header .status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text2); }
 header .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
 
+/* ── Utility / Stats ── */
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.stat-card { background:var(--surface2); border-radius:var(--radius-sm); padding:16px; text-align:center; }
+.stat-value { font-size:24px; font-weight:700; color:var(--accent); }
+.stat-label { font-size:12px; color:var(--text2); margin-top:2px; }
+.btn-danger { color:var(--red); border-color:var(--red); }
+.btn-danger:hover { background:var(--red); color:#fff; }
+
+/* ── Preference Stats ── */
+.stat-box {
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  min-width: 80px;
+  flex: 1;
+  text-align: center;
+}
+.stat-box .stat-value {
+  font-size: 22px;
+  font-weight: 700;
+}
+.stat-box .stat-label {
+  font-size: 11px;
+  color: var(--text2);
+  margin-top: 2px;
+}
+
 /* ── Tabs ── */
 .tabs {
   display: flex;
@@ -275,6 +302,7 @@ select option { background: var(--surface); }
   <button class="tab-btn" data-tab="pdfparse">📖 文档解析</button>
   <button class="tab-btn" data-tab="meeting">🎙 会议纪要</button>
   <button class="tab-btn" data-tab="ragqa">🧠 知识库</button>
+  <button class="tab-btn" data-tab="rlhf">🤖 模型训练</button>
 </div>
 
 <main>
@@ -417,6 +445,76 @@ select option { background: var(--surface); }
     <div class="card" id="kbAnswerCard" style="display:none">
       <div class="card-title">💡 回答</div>
       <div class="result-area" id="kbAnswer"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ 模块5: 偏好学习（根据评分自动优化） ═══════════ -->
+  <div class="tab-content" id="tab-rlhf">
+    <div class="card">
+      <div class="card-title">
+        <span>🧠 偏好分析 · 你的评分决定了 AI 的写作风格</span>
+        <button class="btn btn-sm btn-secondary" onclick="loadPreference()" style="float:right">🔄 刷新</button>
+      </div>
+      <div id="preferenceSummary" style="padding:8px 0;min-height:40px">
+        <div class="progress" id="prefProgress"><div class="spinner"></div><span>分析中...</span></div>
+      </div>
+    </div>
+
+    <div class="card" id="systemPromptCard" style="display:none">
+      <div class="card-title">💬 个性化系统提示词（当前自动生效）</div>
+      <div id="systemPromptPreview" class="result-area" style="font-size:13px;background:var(--surface1);font-family:'Courier New',monospace;white-space:pre-wrap"></div>
+      <div style="font-size:12px;color:var(--text2);margin-top:6px">
+        每次调用 DeepSeek API 时，系统会自动附加上面的提示词。反馈越多，提示词越精准。
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>📋 历史评分记录</span>
+        <button class="btn btn-sm btn-secondary" onclick="loadFeedbackHistory()">🔄 刷新</button>
+      </div>
+      <div id="feedbackHistoryList" class="result-area" style="max-height:280px;overflow:auto;font-size:13px"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>⏪ 手动触发偏好更新</span>
+        <span style="font-size:12px;color:var(--text2)">（系统会自动更新，你也可以手动点一下）</span>
+      </div>
+      <button class="btn btn-primary" onclick="refreshPreference()" style="width:100%;margin-top:4px">🔄 根据评分重新生成个性化提示词</button>
+    </div>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+
+    <!-- ═══════════ RLHF 模拟器面板（面试亮点） ═══════════ -->
+    <div class="card" style="border:2px solid var(--orange);border-radius:12px">
+      <div class="card-title" style="font-size:16px;color:var(--orange)">
+        🧪 RLHF 模拟器 · 用 DeepSeek API 模拟完整的强化学习流程
+      </div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:12px">
+        这个面板展示了真正的 RLHF 工作流：<strong>Actor 采样 → Reward Model 评分 → 策略更新 → KL 约束</strong>。
+        每一步都通过 DeepSeek API 真实执行，让你看到模型如何逐步优化自己的输出策略。
+      </div>
+      
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <textarea id="simPrompt" placeholder="输入一个问题或写作需求..." rows="3" style="flex:1;min-width:200px"></textarea>
+      </div>
+      <div class="btn-group" style="flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="runRLHF_Step()">⚡ 执行一步 RLHF 训练</button>
+        <button class="btn btn-secondary" onclick="runRLHF_Demo()">🎬 运行完整演示</button>
+        <button class="btn btn-sm btn-secondary" onclick="loadRLHF_Status()">🔄 刷新状态</button>
+      </div>
+      <div class="progress" id="simProgress" style="display:none"><div class="spinner"></div><span>正在运行 RLHF 模拟...</span></div>
+    </div>
+
+    <div class="card" id="simResultCard" style="display:none">
+      <div class="card-title">📊 当前 RLHF 状态</div>
+      <div id="simStatusArea" class="result-area" style="font-size:13px"></div>
+    </div>
+
+    <div class="card" id="simDetailCard" style="display:none">
+      <div class="card-title">📝 训练步骤详情</div>
+      <div id="simDetailArea" class="result-area" style="font-size:13px;max-height:400px;overflow:auto"></div>
     </div>
   </div>
 </main>
@@ -799,8 +897,299 @@ function copyContent(elementId) {
   }
 }
 
-// 初始化加载知识库列表
-loadKbList();
+// ═══════════ 模块5: 模型训练 RLHF ═══════════
+
+// ═══════════ 模块5: 偏好学习（根据评分自动优化） ═══════════
+
+async function loadPreference() {
+  const progress = document.getElementById('prefProgress');
+  if (progress) progress.style.display = 'flex';
+  try {
+    const res = await fetch(API + '/api/feedback/stats');
+    const data = await res.json();
+    if (progress) progress.style.display = 'none';
+    
+    const summary = document.getElementById('preferenceSummary');
+    const pref = data.preference;
+    
+    if (!pref || pref.status === 'no_data' || pref.total === 0) {
+      summary.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">📝</div>
+          <p>暂无评分数据</p>
+          <p style="font-size:13px;color:var(--text2);margin-top:8px">
+            使用 AI 写作后给结果打分（1-5⭐），系统会自动学习你的偏好
+          </p>
+        </div>`;
+      document.getElementById('systemPromptCard').style.display = 'none';
+      return;
+    }
+    
+    // 信号强度指示
+    const strengthMap = {
+      strong: { label: '💪 较强', color: 'var(--green)' },
+      medium: { label: '👍 中等', color: 'var(--orange)' },
+      weak: { label: '🔄 较弱（继续评分会更好）', color: 'var(--text2)' },
+    };
+    const ss = strengthMap[pref.signal_strength] || strengthMap.weak;
+    
+    let html = `
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+        <div class="stat-box">
+          <div class="stat-value">${pref.total}</div>
+          <div class="stat-label">总评分</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" style="color:var(--green)">${pref.high_ratings}</div>
+          <div class="stat-label">好评 (4-5⭐)</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" style="color:var(--text2)">${pref.mid_ratings}</div>
+          <div class="stat-label">中评 (3⭐)</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" style="color:var(--red)">${pref.low_ratings}</div>
+          <div class="stat-label">差评 (1-2⭐)</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">${pref.avg_rating}</div>
+          <div class="stat-label">平均分</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" style="color:${ss.color};font-size:14px">${ss.label}</div>
+          <div class="stat-label">信号强度</div>
+        </div>
+      </div>`;
+    
+    // 偏好评语
+    if (pref.preferences && pref.preferences.length > 0) {
+      html += '<div style="margin-top:8px;padding:10px;background:var(--surface2);border-radius:8px">';
+      html += '<strong style="font-size:13px">🎯 系统从你的评分中学习的偏好：</strong><ul style="margin:6px 0 0 16px;font-size:13px;line-height:1.6">';
+      pref.preferences.forEach(p => {
+        html += '<li>' + p + '</li>';
+      });
+      html += '</ul></div>';
+    }
+    
+    summary.innerHTML = html;
+    
+    // 显示系统提示词
+    const sysPromptCard = document.getElementById('systemPromptCard');
+    const sysPromptEl = document.getElementById('systemPromptPreview');
+    if (pref.system_prompt) {
+      sysPromptEl.textContent = pref.system_prompt;
+      sysPromptCard.style.display = 'block';
+    } else {
+      sysPromptCard.style.display = 'none';
+    }
+    
+  } catch (e) {
+    if (progress) progress.style.display = 'none';
+    document.getElementById('preferenceSummary').innerHTML = `
+      <div style="color:var(--red)">加载失败: ${e.message}</div>`;
+  }
+}
+
+async function loadFeedbackHistory() {
+  try {
+    const res = await fetch(API + '/api/feedback/list?limit=30');
+    const data = await res.json();
+    const list = document.getElementById('feedbackHistoryList');
+    if (data.feedbacks && data.feedbacks.length) {
+      list.innerHTML = data.feedbacks.slice().reverse().map(fb =>
+        `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">
+          <div>
+            <span style="color:var(--text2);font-size:12px">[${fb.module}]</span>
+            <span style="color:${fb.rating >= 4 ? 'var(--green)' : fb.rating <= 2 ? 'var(--red)' : 'var(--orange)'}">
+              ${'⭐'.repeat(fb.rating)}${'☆'.repeat(5-fb.rating)}
+            </span>
+          </div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px">
+            ${fb.prompt.substring(0, 80)}${fb.prompt.length > 80 ? '...' : ''}
+          </div>
+        </div>`
+      ).join('');
+    } else {
+      list.innerHTML = '<div class="empty-state"><div class="icon">📝</div><p>暂无评分记录</p></div>';
+    }
+  } catch (e) {
+    document.getElementById('feedbackHistoryList').innerHTML = `<div style="color:var(--red)">加载失败: ${e.message}</div>`;
+  }
+}
+
+async function refreshPreference() {
+  toast('正在分析评分偏好...', 'info');
+  try {
+    const res = await fetch(API + '/api/rlhf/train', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      toast('个性化提示词已更新', 'success');
+      loadPreference();
+    } else {
+      toast('更新失败: ' + data.error, 'error');
+    }
+  } catch (e) {
+    toast('更新失败: ' + e.message, 'error');
+  }
+}
+
+// ═══════════ RLHF 模拟器前端 ═══════════
+
+async function runRLHF_Step() {
+  const prompt = document.getElementById('simPrompt').value.trim();
+  if (!prompt) {
+    toast('请输入一个问题或写作需求', 'error');
+    return;
+  }
+  
+  const progress = document.getElementById('simProgress');
+  progress.style.display = 'flex';
+  
+  try {
+    const res = await fetch(API + '/api/rlhf/sim/train', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    });
+    const data = await res.json();
+    progress.style.display = 'none';
+    
+    if (data.error) { toast('RLHF 执行失败: ' + data.error, 'error'); return; }
+    
+    // 显示状态
+    const statusCard = document.getElementById('simResultCard');
+    const statusArea = document.getElementById('simStatusArea');
+    statusCard.style.display = 'block';
+    
+    let html = '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">';
+    
+    // 最佳策略
+    const bestColors = {
+      'default': '#888',
+      'structured': '#4CAF50',
+      'concise': '#2196F3',
+      'detailed': '#FF9800',
+    };
+    const bc = bestColors[data.best_strategy] || '#888';
+    
+    html += `
+      <div class="stat-box" style="border:2px solid ${bc}">
+        <div class="stat-value" style="font-size:18px;color:${bc}">${data.best_strategy}</div>
+        <div class="stat-label">🏆 最佳策略</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" style="font-size:18px">${(data.best_score * 100).toFixed(0)}</div>
+        <div class="stat-label">🏅 最高评分</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" style="font-size:18px">${(data.kl_penalty * 100).toFixed(0)}%</div>
+        <div class="stat-label">🔄 KL 惩罚</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" style="font-size:18px">${data.kl_clipped ? '⚠️ 是' : '✅ 否'}</div>
+        <div class="stat-label">🔒 是否裁剪</div>
+      </div>`;
+    html += '</div>';
+    
+    // 策略权重变化表
+    html += '<table style="width:100%;font-size:13px;border-collapse:collapse">';
+    html += '<tr style="background:var(--surface2)"><th>策略</th><th>原权重</th><th>新权重</th><th>变化</th><th>评分</th><th>尝试次数</th></tr>';
+    data.strategy_updates.forEach(u => {
+      const diff = (u.weight_after - u.weight_before) * 100;
+      const arrow = diff > 0 ? '📈' : diff < 0 ? '📉' : '➡️';
+      html += `<tr>
+        <td><strong>${u.name}</strong></td>
+        <td>${(u.weight_before * 100).toFixed(0)}%</td>
+        <td>${(u.weight_after * 100).toFixed(0)}%</td>
+        <td>${arrow} ${Math.abs(diff).toFixed(0)}%</td>
+        <td>${(u.score * 100).toFixed(0)}/100</td>
+        <td>${u.trials} 次</td>
+      </tr>`;
+    });
+    html += '</table>';
+    
+    // 各策略生成的回答预览
+    if (data.explorations && data.explorations.length) {
+      html += '<div style="margin-top:12px"><strong>🎯 各策略生成对比：</strong></div>';
+      data.explorations.forEach(e => {
+        const color = bestColors[e.strategy] || '#888';
+        html += `<div style="margin-top:6px;padding:8px;background:var(--surface2);border-radius:6px;border-left:4px solid ${color}">
+          <div style="font-weight:600;font-size:13px">${e.strategy} (评分: ${(e.scores?.overall * 100 || 0).toFixed(0)}/100)</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:4px">${e.response || '(无内容)'}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px">
+            各维度: ${Object.entries(e.scores || {}).filter(([k]) => k !== 'overall').map(([k, v]) => `${k}: ${(v * 100).toFixed(0)}`).join(' · ')}
+          </div>
+        </div>`;
+      });
+    }
+    
+    statusArea.innerHTML = html;
+    
+    // 显示详细日志
+    const detailCard = document.getElementById('simDetailCard');
+    const detailArea = document.getElementById('simDetailArea');
+    detailCard.style.display = 'block';
+    detailArea.innerHTML = `<pre style="font-size:11px;margin:0;white-space:pre-wrap">${JSON.stringify(data, null, 2)}</pre>`;
+    
+    toast('✅ RLHF 步骤完成！最佳策略: ' + data.best_strategy, 'success');
+    
+  } catch (e) {
+    progress.style.display = 'none';
+    toast('RLHF 执行失败: ' + e.message, 'error');
+  }
+}
+
+async function runRLHF_Demo() {
+  const examples = [
+    '写一份本周工作总结',
+    '介绍一下微服务架构的优缺点',
+    '写一封请假邮件',
+  ];
+  
+  const prompt = document.getElementById('simPrompt');
+  prompt.value = examples[Math.floor(Math.random() * examples.length)];
+  toast('已填入示例文本，点击执行 RLHF 训练', 'info');
+}
+
+async function loadRLHF_Status() {
+  try {
+    const res = await fetch(API + '/api/rlhf/sim/status');
+    const data = await res.json();
+    
+    if (data.error) { toast('获取状态失败: ' + data.error, 'error'); return; }
+    
+    const statusCard = document.getElementById('simResultCard');
+    const statusArea = document.getElementById('simStatusArea');
+    statusCard.style.display = 'block';
+    
+    let html = '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">' + 
+      '<div class="stat-box"><div class="stat-value" style="font-size:18px">' + data.history_length + '</div><div class="stat-label">训练步数</div></div>' +
+      '</div>';
+    
+    if (data.strategies && data.strategies.length) {
+      html += '<table style="width:100%;font-size:13px;border-collapse:collapse">';
+      html += '<tr style="background:var(--surface2)"><th>策略</th><th>权重</th><th>评分</th><th>尝试次数</th></tr>';
+      data.strategies.forEach(s => {
+        html += `<tr><td><strong>${s.name}</strong></td><td>${(s.weight * 100).toFixed(0)}%</td><td>${(s.score * 100).toFixed(0)}/100</td><td>${s.trials} 次</td></tr>`;
+      });
+      html += '</table>';
+    }
+    
+    if (data.last_step) {
+      html += '<div style="margin-top:8px;font-size:12px;color:var(--text2)">最后一步最佳: ' + data.last_step.best_strategy + '</div>';
+    }
+    
+    statusArea.innerHTML = html;
+    toast('已刷新 RLHF 状态', 'success');
+    
+  } catch (e) {
+    toast('获取状态失败: ' + e.message, 'error');
+  }
+}
+
+// 初始化加载
+loadPreference();
+loadFeedbackHistory();
 </script>
 </body>
 </html>
