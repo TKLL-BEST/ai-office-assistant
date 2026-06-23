@@ -187,9 +187,6 @@ curl -X POST http://localhost:5000/api/doc-generator/generate \
 ---
 
 ### 5. 偏好学习 + RLHF 模拟器
-
-> **面试话术：** 本项目包含两个层面的"RLHF"实现：一个轻量的**偏好学习**层（生产可用）和一个完整的**RLHF 模拟器**层（面试可讲）。
-
 ---
 
 #### 第一部分：偏好学习（在线生产系统）
@@ -224,7 +221,7 @@ curl -X POST http://localhost:5000/api/doc-generator/generate \
 
 ---
 
-#### 第二部分：RLHF 模拟器（面试亮点）
+#### 第二部分：RLHF 模拟器
 
 > **核心理念：** 用 DeepSeek API 模拟完整的 RLHF 流程，展示对 PPO/DPO 原理的理解。
 
@@ -260,25 +257,6 @@ curl -X POST http://localhost:5000/api/doc-generator/generate \
 └──────────────────────────────────────────────────────────┘
 ```
 
-##### 为什么这叫"RLHF"？
-
-| 标准 RLHF 组件 | 本模拟器实现 |
-|:---|:---|
-| **Actor (策略模型)** | 4 种 system prompt 策略 + 概率采样 |
-| **Reward Model (奖励模型)** | DeepSeek API 多维度评分 |
-| **Critic (价值估计)** | 历史评分平均（简化版） |
-| **PPO 策略梯度** | 基于 reward 的权重增减 |
-| **KL 惩罚** | 策略差异度约束，防止突变 |
-| **PPO clip** | KL > 0.4 时部分回退权重 |
-| **DPO 偏好对比** | DeepSeek API 直接比较 A/B |
-
-##### 亮点设计
-
-- **Reward Model 可解释性**：用 LLM 当裁判，不仅能打分还能给出评分原因
-- **KL 惩罚**：显示新旧策略的差异度，面试可讲 "KL 散度在 RLHF 中用来防止 policy 偏离原始模型太远"
-- **探索-利用平衡**：低权重策略仍有被采样机会，模拟 exploration
-- **完全自包含**：不依赖额外框架，纯 Python + DeepSeek API，可在任何环境运行
-
 ##### API 端点
 
 | 端点 | 方法 | 说明 |
@@ -298,17 +276,6 @@ curl -X POST http://localhost:5000/api/doc-generator/generate \
 4. KL 惩罚值和是否触发裁剪
 
 ---
-
-##### 面试可讲的技术点
-
-| 问题 | 你能讲的内容 |
-|------|------------|
-| DPO 和 PPO 核心区别 | DPO 直接通过偏好对优化，不需要独立 reward model；PPO 需要训练 critic + reward，更复杂但更灵活 |
-| Reward Model 怎么训练？ | 用人类偏好数据训练分类器，对回答进行排序评分。本项目用 LLM API 模拟了这个行为 |
-| KL 惩罚有什么用？ | 防止 policy 跑偏太远，保持生成多样性。没有 KL 惩罚会让模型 collapse 到单一模式 |
-| 如何平衡探索和利用？ | 按权重采样的策略自带 exploration——低权重也有被选中的机会 |
-| 为什么你的 RLHF 不需要 GPU？ | 用 API 调用替代了模型参数训练，展示了 RLHF 的 pipeline 和数据流，而非参数更新本身 |
-
 #### API 端点
 
 | 端点 | 方法 | 说明 |
