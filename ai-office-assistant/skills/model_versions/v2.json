@@ -1,0 +1,28 @@
+{
+  "version_id": "v2",
+  "created_at": "2026-06-23T11:47:19.608984",
+  "prompt_templates": {
+    "writing": {
+      "default": "请用结构化格式（分点、缩进、表格）回答:\n\n{query}",
+      "formal": "请以正式书面语风格生成以下内容，要求逻辑严谨、用词准确:\n\n{query}",
+      "concise": "请用最精炼的语言回答:\n\n{query}",
+      "structured": "请用结构化格式（分点、缩进、表格）回答:\n\n{query}",
+      "creative": "请发挥创意，以生动的语言回答:\n\n{query}",
+      "original_default": "请根据以下要求生成内容:\n\n{query}"
+    },
+    "analysis": {
+      "default": "请分析以下内容:\n\n{query}",
+      "deep": "请逐层深入分析，从表层现象到根本原因:\n\n{query}",
+      "rag_based": "基于以下参考文档，回答用户问题:\n\n参考文档: {context}\n\n用户问题: {query}"
+    },
+    "coding": {
+      "default": "请写出以下代码:\n\n{query}",
+      "explain": "请解释以下代码的原理和用途:\n\n{query}",
+      "optimize": "请优化以下代码，提高性能:\n\n{query}"
+    }
+  },
+  "score": 0.41,
+  "model_name": "prompt_template",
+  "params": {},
+  "description": "DPO 训练 3 条数据"
+}
